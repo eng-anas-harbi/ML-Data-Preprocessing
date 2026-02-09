@@ -1,0 +1,88 @@
+# هذا وورك فلو قياسي عشان تجهز البيانات لموديلات تعلم الآلة
+# يصلح كنموذج تعليمي، مع ملاحظة أن بعض الخطوات قد لا تكون مطلوبة
+# في بعض الموديلات (مثل الأشجار الي ما تحتاج Scaling)
+
+# تحميل المكتبات اللازمة
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+
+# تحميل قاعدة البيانات
+# تقسيمها إلى:
+# x : المتغيرات المستقلة (Features)
+# y : المتغير التابع (Target)
+dataset = pd.read_csv('Data.csv')
+x = dataset.iloc[:, :-1].values
+y = dataset.iloc[:, -1].values
+
+
+# إنشاء Imputer للتعامل مع القيم الفارغة
+# missing_values : القيم المستهدفة للاستبدال (NaN)
+# strategy : طريقة التعويض، وهنا نستخدم المتوسط للأعمدة الرقمية
+imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
+
+
+# تدريب الـ imputer على الأعمدة الرقمية فقط (Age, Salary)
+# لا نطبقه على الأعمدة الوصفية
+imputer.fit(x[:, 1:3])
+
+
+# تطبيق التعويض على نفس الأعمدة
+# يتم استبدال القيم الفارغة بالقيم المحسوبة من التدريب
+x[:, 1:3] = imputer.transform(x[:, 1:3])
+
+
+# ColumnTransformer يُستخدم هنا لترميز العمود الوصفي فقط (Country)
+# OneHotEncoder:
+# - يحذف العمود الأصلي
+# - ينشئ عمود لكل فئة
+# - يضع 1 عند تطابق الفئة و 0 في غير ذلك
+# remainder='passthrough' يعني ترك باقي الأعمدة بدون تغيير
+ct = ColumnTransformer(
+    transformers=[('encoder', OneHotEncoder(), [0])],
+    remainder='passthrough'
+)
+
+
+# نستخدم fit_transform لأننا في مرحلة تجهيز البيانات
+# و عشان ال اسكي ليرن غير بهيكل الاراي للأكس فتغير نوعها فلازم ترجعها لأراي نمباي
+x = np.array(ct.fit_transform(x))
+
+
+#هنا نستخدم داله ليبل انكودر لأنها ترمز القيم الثنائية
+# في مثل حالتنا ال نعم و ال لا
+le = LabelEncoder()
+y = le.fit_transform(y)
+
+
+# تقسيم البيانات إلى تدريب واختبار
+# الترتيب مهم: x ثم y
+# test_size = 0.2 يعني 20% اختبار
+# random_state لتثبيت العشوائية وإعادة نفس النتائج
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=1)
+
+
+# StandardScaler يُستخدم لتوحيد المقاييس بين الأعمدة الرقمية
+# هذا يمنع الأعمدة ذات القيم الكبيرة من التأثير غير العادل على النموذج
+sc = StandardScaler()
+
+
+#  نستخدم عشان ما يكون فيه داتا ليك fit فقط على بيانات التدريب 
+# لحساب المتوسط والانحراف المعياري منها
+# الأعمدة من 3 فصاعدًا هي الأعمدة الرقمية بعد OneHotEncoding
+x_train[:, 3:] = sc.fit_transform(x_train[:, 3:])
+
+
+# نستخدم transform فقط على بيانات الاختبار
+# لمنع Data Leakage
+x_test[:, 3:] = sc.transform(x_test[:, 3:])
+
+print("the X train after stand : \n",x_train,"\n###########################\n")
+print("the X test after stand : \n",x_test,"\n###########################\n")
