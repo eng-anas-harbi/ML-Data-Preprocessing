@@ -29,7 +29,7 @@ The file `Data.csv` has:
 
 ## How to use it
 
-1. Put `Data.csv` in the same folder as `preprocessing.py`
+1. Put `Data.csv` in the same folder as any of workflow file
 2. Run the Python file
 3. After running, you’ll get:
    - `x_train` and `x_test`: prepped features
